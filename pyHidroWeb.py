@@ -35,7 +35,7 @@ def download_hidroweb(id_station, dir_out, var_cod="10"):
 	Select(driver.find_element_by_name('cboTipoReg')).select_by_value(var_cod)
 	
 	driver.execute_script("javascript:criarArq("+id_station+",1)")
-	time.sleep(35)
+	time.sleep(10)
 	
 	html_source = driver.page_source
 	web_soup = BeautifulSoup(html_source,'html.parser')
