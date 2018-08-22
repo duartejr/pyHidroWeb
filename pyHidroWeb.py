@@ -34,8 +34,8 @@ def click_css_selector(driver, css_selector):
 			n += 1
 
 		if n == 300:
-			print('Tempo de espera excedido. Processo encerrado.')
-			exit()
+			print('Tempo de espera excedido.')
+			break()
 
 def download_hidroweb(id_station, name_estation, dir_out):
 
@@ -74,6 +74,7 @@ def download_hidroweb(id_station, name_estation, dir_out):
 			n += 1
 		if n == 300:
 			print('Tempo de espera excedido. Processo encerrado.')
+			exit()
 	
 	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:codigoEstacao"]')
 	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:codigoEstacao"]').send_keys([id_station, Keys.ENTER])
