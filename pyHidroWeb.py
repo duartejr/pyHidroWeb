@@ -22,7 +22,7 @@ def wait_load_items(driver, xpath):
 			time.sleep(1)
 			n += 1
 		if n == 300:
-			print('Time excedet time limits process is finished')
+			print('Tempo de espera excedito. Processo encerrado.')
 			exit()
 
 def click_css_selector(driver, css_selector):
@@ -37,7 +37,7 @@ def click_css_selector(driver, css_selector):
 			n += 1
 
 		if n == 300:
-			print('Time excedet time limits process is finished')
+			print('Tempo de espera excedido. Processo encerrado.')
 			exit()
 
 def download_hidroweb(id_station, name_estation, dir_out):
@@ -76,15 +76,14 @@ def download_hidroweb(id_station, name_estation, dir_out):
 			time.sleep(1)
 			n += 1
 		if n == 300:
-			print('Exit for the time limit is finished')
+			print('Tempo de espera excedido. Processo encerrado.')
 	
 	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:codigoEstacao"]')
 	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:codigoEstacao"]').send_keys([id_station, Keys.ENTER])
 	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:nomeEstacao"]')
 	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:nomeEstacao"]').send_keys([name_estation, Keys.ENTER])
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:bt')
-	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:fsListaEstacoesC:j_idt179:table:0:ckbSelecionada"]')
-	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:fsListaEstacoesC:j_idt179:table:0:ckbSelecionada"]').click()
+	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:j_idt179\\:table\\:0\\:ckbSelecionada')
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:radTipoArquivo-componente > div:nth-child(2) > div:nth-child(2)')
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:btBaixar')
 
