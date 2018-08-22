@@ -3,9 +3,6 @@ import time
 from pyvirtualdisplay import Display
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-import os
-import pandas_access
-import numpy as np
 
 home = os.path.expanduser('~')
 
