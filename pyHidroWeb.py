@@ -1,65 +1,94 @@
 # -*- coding: utf-8 -*-
-import re
-import os
-import wget
 import time
 from pyvirtualdisplay import Display
-from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.keys import Keys
+import os
+import pandas_access
+import numpy as np
 
 home = os.path.expanduser('~')
 
-def download_hidroweb(id_station, dir_out, var_cod="10"):
+def wait_load_items(driver, xpath):
 
-	display = Display(visible=0, size=(800,600))
-	display.start()
+	n = 1
+	p = 1
+	while p: 
+		try:
+			driver.find_element_by_xpath(xpath)
+			p = 0
+		except:
+			print(n, xpath)
+			time.sleep(1)
+			n += 1
+		if n == 300:
+			print('Time excedet time limits process is finished')
+			exit()
 
-	driver = webdriver.Firefox()
-	url = 'http://www.snirh.gov.br/hidroweb/HidroWeb.asp?TocItem=1080&TipoReg=7&MostraCon=false&CriaArq=false&TipoArq=1&SerieHist=true'
+def click_css_selector(driver, css_selector):
+	n = 0
+	p = 1
+	while p:
+		try:
+			driver.find_element_by_css_selector(css_selector).click()
+			p = 0
+		except:
+			time.sleep(1)
+			n += 1
+
+		if n == 300:
+			print('Time excedet time limits process is finished')
+			exit()
+
+def download_hidroweb(id_station, name_estation, dir_out):
+
+	# display = Display(visible=0, size=(800,600))
+	# display.start()
+
+	fp = webdriver.FirefoxProfile()
+
+	fp.set_preference("browser.download.folderList",2)
+	fp.set_preference("browser.download.dir",dir_out)
+	fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/msword, application/csv, application/ris, text/csv, image/png, application/pdf, text/html, text/plain, application/zip, application/x-zip, application/x-zip-compressed, application/download, application/octet-stream")
+	fp.set_preference("browser.download.manager.showWhenStarting", False)
+	fp.set_preference("browser.download.manager.focusWhenStarting", False)  
+	fp.set_preference("browser.download.useDownloadDir", True)
+	fp.set_preference("browser.helperApps.alwaysAsk.force", False)
+	fp.set_preference("browser.download.manager.alertOnEXEOpen", False)
+	fp.set_preference("browser.download.manager.closeWhenDone", True)
+	fp.set_preference("browser.download.manager.showAlertOnComplete", False)
+	fp.set_preference("browser.download.manager.useWindow", False)
+	fp.set_preference("services.sync.prefs.sync.browser.download.manager.showWhenStarting", False)
+	fp.set_preference("pdfjs.disabled", True)
+
+	driver = webdriver.Firefox(firefox_profile=fp)
+	url = 'http://www.snirh.gov.br/hidroweb/publico/apresentacao.jsf'
 	driver.get(url)
+	time.sleep(1)
+	driver.get(url)
+	n = 0
+	p = 1
+	while  p:
+		try:
+			driver.find_element_by_link_text('Séries Históricas').click()
+			p = 0
+		except:
+			time.sleep(1)
+			n += 1
+		if n == 300:
+			print('Exit for the time limit is finished')
 	
-	driver.find_element_by_id("txtCodigo1").send_keys(id_station)
-	driver.find_element_by_id("txtCodigo2").send_keys(id_station)
-	
-	driver.execute_script("javascript:mostrarCon(1080,7,true)")
-	time.sleep(10)
-	
-	driver.execute_script("javascript:abrirEstacao("+id_station+")")
-	time.sleep(10)
-	
-	window_before = driver.window_handles[0]
-	window_after = driver.window_handles[1]
-	driver.switch_to_window(window_after)
-	
-	Select(driver.find_element_by_name('cboTipoReg')).select_by_value(var_cod)
-	
-	driver.execute_script("javascript:criarArq("+id_station+",1)")
-	time.sleep(10)
-	
-	html_source = driver.page_source
-	web_soup = BeautifulSoup(html_source,'html.parser')
-	link = web_soup.findAll('a', attrs={'href': re.compile("^ARQ/")})[0]['href']
-	link = 'http://www.snirh.gov.br/hidroweb/'+link
-	print link
-	wget.download(link, out=dir_out)
-	
-	driver.close()
-	driver.switch_to_window(window_before)
-	driver.close()
-	
-	display.stop()
+	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:codigoEstacao"]')
+	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:codigoEstacao"]').send_keys([id_station, Keys.ENTER])
+	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:nomeEstacao"]')
+	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:nomeEstacao"]').send_keys([name_estation, Keys.ENTER])
+	click_css_selector(driver, '#form\\:fsListaEstacoes\\:bt')
+	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:fsListaEstacoesC:j_idt179:table:0:ckbSelecionada"]')
+	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:fsListaEstacoesC:j_idt179:table:0:ckbSelecionada"]').click()
+	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:radTipoArquivo-componente > div:nth-child(2) > div:nth-child(2)')
+	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:btBaixar')
 
-'''
-var_cod examples:
-'8'  -> cotas (cm)
-'9'  -> vazão (m³/s)
-'10' -> precipitação (mm)
-'12' -> qualidade da água
-'13' -> resumo de descarga
-'15' -> curva de descarga
-'16' -> perfil transversal
-'''
 
-download_hidroweb('12360000', home, "9")
-download_hidroweb('02950013', home)
+ID_ESTACAO = '00047001'
+NOME_ESTACAO = 'MARACANÃ'
+download_hidroweb(ID_ESTACAO, NOME_ESTACAO, home)
