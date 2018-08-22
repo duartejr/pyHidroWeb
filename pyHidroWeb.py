@@ -88,6 +88,6 @@ def download_hidroweb(id_station, name_estation, dir_out):
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:btBaixar')
 
 
-ID_ESTACAO = '00047001'
-NOME_ESTACAO = 'MARACANÃ'
+ID_ESTACAO = '47001000'
+NOME_ESTACAO = 'PORTO - TRAVESSIA DA BALSA'
 download_hidroweb(ID_ESTACAO, NOME_ESTACAO, home)
