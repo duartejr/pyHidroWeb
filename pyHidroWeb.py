@@ -35,7 +35,7 @@ def click_css_selector(driver, css_selector):
 
 		if n == 300:
 			print('Tempo de espera excedido.')
-			break()
+			break
 
 def download_hidroweb(id_station, name_estation, dir_out):
 
