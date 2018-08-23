@@ -81,7 +81,8 @@ def download_hidroweb(id_station, name_estation, dir_out):
 	wait_load_items(driver, '//*[@id="form:fsListaEstacoes:nomeEstacao"]')
 	driver.find_element_by_xpath('//*[@id="form:fsListaEstacoes:nomeEstacao"]').send_keys([name_estation, Keys.ENTER])
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:bt')
-	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:j_idt179\\:table\\:0\\:ckbSelecionada')
+	wait_load_items(driver, '//div[contains(@class, "checkbox i-checks")]')
+	driver.find_element_by_xpath('//div[contains(@class, "checkbox i-checks")]').click()
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:radTipoArquivo-componente > div:nth-child(2) > div:nth-child(2)')
 	click_css_selector(driver, '#form\\:fsListaEstacoes\\:fsListaEstacoesC\\:btBaixar')
 
