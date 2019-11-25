@@ -17,9 +17,27 @@ def menu_thiessen():
     poly = input("Nome do polígono da área de interesse:\n")
     attr = input("Nome do atributo para seleção do polígono:\n")
     buffer = input("Valor do buffer:\n")
-    date = check_date()
+    
+    print('Deseja informar lista com o ID dos postos de interesse?(y\n)\n')
+    tp = input()
+    
+    while tp[0].lower() not in ['y','n','s']:
+        tp = input('Opção inválida. Tente novamente:\n')
+    
+    if tp == 'n':
+        list_ids = False
+    
+    else:
+        list_ids = check_dir(input('Informe caminho para arquivo com lista de estações:\n'),
+                             'file',ext='.csv')
+    print('Data inciail:') 
+    dates = [check_date()]
+    print('Data final:')
+    dates.append(check_date())
+    
     dir_out = check_out(input("Informe o diretório de saída:\n"))
-    calc_thiessen(hidroweb_dir, inventory, shp, poly, attr, buffer, date, dir_out)
+    calc_thiessen(hidroweb_dir, inventory, list_ids, shp, poly, attr, buffer,
+                  dates, dir_out)
 
 def menu_download():
     print('Selecione tipo de download:')
@@ -33,7 +51,7 @@ def menu_download():
         poly = input("Nome do polígono da área de interesse:\n")
         attr = input("Nome do atributo para seleção do polígono:\n")
         buffer = input("Valor do buffer:\n")
-        tp = input("Tipo de Estação:\n1: Fluviométrica\n2: Pluviométrica")
+        tp = input("Tipo de Estação:\n1: Fluviométrica\n2: Pluviométrica\n")
         
         while int(tp) != 1 and int(tp) != 2:
             tp = input("Opção inválida tente novamente:")

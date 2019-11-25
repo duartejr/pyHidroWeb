@@ -241,36 +241,46 @@ def voronoi(px, py, bacx, bacy, fign=False, cont=False):
     return alpha
 
 
-def calc_thiessen(hidroweb_dir, inventory, shp, poly, attr, buffer, date, dir_out):
+def calc_thiessen(hidroweb_dir, inventory, list_ids, shp, poly, attr, buffer,
+                  dates, dir_out):
     
     loc_stations = pre_process(hidroweb_dir, inventory)
     
-    if not attr:
-        attr = 'basiname' # nome padrão do atributo caso não informado
+    if list_ids:
+        IDS = pd.read_csv(list_ids)
+        stations_in = loc_stations[np.where(loc_stations == IDS.values)[0]]
     
-    if buffer:
-        buffer = float(buffer)
     else:
-        buffer = False # padrão caso não informado
-    
-    # extrai vertices do poligono (poly) do shape informado
-    vertices = getvert(shp, poly, attr=attr, buffer=buffer)
-    
-    # verifica quais postos estão dentro do polígono
-    isin = isinpoly3(loc_stations[:,2], loc_stations[:,1], vertices)
-    
-    # seleciona apenas postos dentro do polígono
-    estations_in = loc_stations[isin,:]
+        if not attr:
+            attr = 'ID' # nome padrão do atributo caso não informado
+        
+        if buffer:
+            buffer = float(buffer)
+        else:
+            buffer = False # padrão caso não informado
+        
+        # extrai vertices do poligono (poly) do shape informado
+        vertices = getvert(shp, poly, attr=attr, buffer=buffer)
+        
+        # verifica quais postos estão dentro do polígono
+        isin = isinpoly3(loc_stations[:,2], loc_stations[:,1], vertices)
+        
+        # seleciona apenas postos dentro do polígono
+        stations_in = loc_stations[isin,:]
     
     # converte date de string para datetime
-    date = pd.to_datetime(date, format='%d/%m/%Y')
+    dates = pd.to_datetime(dates, format='%d/%m/%Y')
+    dates = pd.date_range(dates[0], dates[1])
     
     # extrai precipitação dos postos dentro do polígono para a data informada
-    pr_estations = open_files(estations_in, hidroweb_dir, date)
-    
-    # cálculo da precipitação média usando o método de thiessen
-    pr_med = thiessen(pr_estations[:,1], pr_estations[:,0], vertices[:,0],
-                      vertices[:,1], pr_estations[:,2])
+    pr_med = []
+    for date in dates:
+        pr_estations = open_files(stations_in, hidroweb_dir, date)
+        
+        # cálculo da precipitação média usando o método de thiessen
+        pr_med.append([date, thiessen(pr_estations[:,1], pr_estations[:,0],
+                                      vertices[:,0], vertices[:,1],
+                                      pr_estations[:,2])])
     
     # salva a precipitação média no formato .csv
     save_csv(dir_out, pr_med, date, poly)

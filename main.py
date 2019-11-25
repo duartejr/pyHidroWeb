@@ -1,7 +1,7 @@
 from menus import menu_thiessen, menu_download
 
 print("######################################")
-print("#   Bem vindo ao PyHidroweb v. 0.0.6 #")
+print("#   Bem vindo ao PyHidroweb v. 0.0.8 #")
 print("######################################")
 print("\n")
 
