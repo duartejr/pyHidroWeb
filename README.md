@@ -23,7 +23,7 @@ Para o dataType utilizar:
 
 3: para vazão
 
-O id da estação pode ser encontrado no **inventario.csv**
+O id da estação pode ser encontrado no inventario disponível para download no site do hidroweb.
 
 Exemplo2: download_hidrowrb(47000, dataType=2, path_folder='c:\usuarios\nomedousuario\')
 
