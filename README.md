@@ -27,7 +27,7 @@ Para o **dataType** utilizar:
 
 O id da estação pode ser encontrado no inventario disponível para download no site do hidroweb.
 
-Exemplo2: download_hidrowrb(47000, dataType=2, path_folder='c:\usuarios\nomedousuario\')
+Exemplo2: download_hidroweb(47000, dataType=2, path_folder='c:\usuarios\nomedousuario\')
 
 Salva a série da estação 47000 na pasta **path_folder**
 
