@@ -3,33 +3,26 @@ Download de dados pluviométricos e fluviométricos do novo portal HidroWeb da A
 
 # Bibliotecas necessárias
 - pandas
-- numpy
-- selenium
-- pylab
-- scipy
-- shapely
-- glob
-- fiona
-- matplotlib
+- os
+- requests
+- xml
+- datetime
+- calendar
+
 
 # Como utilizar
-Nesta versão foi incorporado um menu interativo main.py para facilitar a utilização das funções da aplicação.
-Ao executar o arquivo main.py será aberto um menu onde o usuário poderá escolher entre baixar dados do portal ou realizar
-o cálculo da precipitação média pelo método de Thiessen (caso já tenha os dados disponíveis).
+Importar a função **download_hidroweb**
+Exemplo1: download_hidroweb(47000, dataType=2)
+Este exemplo realiza o download da série temporal da estação 47000 na pasta home
+Para o dataType utiliza:
+2: para chuva
+3: para vazão
+O id da estação pode ser encontrado no **inventario.csv**
 
-# Download de dados
-Para o download de dados o usuário pode escolher entre duas opções:
+Exemplo2: download_hidrowrb(47000, dataType=2, path_folder='c:\usuarios\nomedousuario\')
+Salva a série da estação 47000 na pasta **path_folder**
 
-1. por área
-
-  Nesta opção o usuário deve passar o arquivo shapefile da área de interesse e serão baixados os dados de todas as estações
-  contidas na área de interesse. 
-   
-2. por código de identificação.
-
-  Nesta opção o usuário deve fornecer um arquivo com o código das estações que deseja obter os dados onde cada linha contém o ID de uma estação.
-
-# Cálculo do Thiessen
-_Em implementação_
-
-Esta oção oferece funções para o usuário cálcular a precipitação média na área de estudo utilizando o método de Thiessen.
+Também é possível especificar
+startDate : Data de início da série de dados
+endDate : Data de fim da série de dados
+consistencyLevel : nível de consistência dos dados (1:dados brutos, 2:dados consistidos)
