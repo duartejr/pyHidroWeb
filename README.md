@@ -17,7 +17,9 @@ Exemplo1: download_hidroweb(47000, dataType=2)
 
 Este exemplo realiza o download da série temporal da estação 47000 na pasta home
 
-Para o dataType utilizar:
+Para o **dataType** utilizar:
+
+1: para cotas
 
 2: para chuva
 
@@ -31,8 +33,8 @@ Salva a série da estação 47000 na pasta **path_folder**
 
 Também é possível especificar
 
-startDate : Data de início da série de dados
+**startDate** : Data de início da série de dados
 
-endDate : Data de fim da série de dados
+**endDate** : Data de fim da série de dados
 
-consistencyLevel : nível de consistência dos dados (1:dados brutos, 2:dados consistidos)
+**consistencyLevel** : nível de consistência dos dados (1:dados brutos, 2:dados consistidos)
