@@ -51,7 +51,7 @@ def save_data(data, dates, consistency, station, dataType, path_folder):
                         f'Consistence_{dataType}_{station}':consistency,
                         f'Data{dataType}_{station}': data})
     filename = f'{dataType}_{station}.csv'
-    df.to_csv(f'{path_folder}/{filename}')
+    df.to_csv(f'{path_folder}/{filename}', index=False)
     print(f'Done --> {path_folder}/{filename}\n')
 
 def download_hidroweb(station, startDate='', endDate='', dataType='', 
@@ -93,5 +93,3 @@ def download_hidroweb(station, startDate='', endDate='', dataType='',
 
     if len(data) > 0:
         save_data(data, dates, consistency, station, dataType, path_folder)
-
-
