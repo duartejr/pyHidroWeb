@@ -33,8 +33,8 @@ Salva a série da estação 47000 na pasta **path_folder**
 
 Também é possível especificar
 
-**startDate** : Data de início da série de dados
+**startDate** : Data de início da série de dados (YYYY-mm-dd)
 
-**endDate** : Data de fim da série de dados
+**endDate** : Data de fim da série de dados (YYYY-mm-dd)
 
 **consistencyLevel** : nível de consistência dos dados (1:dados brutos, 2:dados consistidos)
