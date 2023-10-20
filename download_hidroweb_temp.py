@@ -1,7 +1,6 @@
 #%%
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Point
 import os
 
 DATA_URL = 'https://raw.githubusercontent.com/anagovbr/dados-estacoes-hidro/main/dados'
