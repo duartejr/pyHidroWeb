@@ -10,8 +10,8 @@ INVENTORY_URL = 'https://raw.githubusercontent.com/anagovbr/dados-estacoes-hidro
 
 
 def download_from_list(stations_list:List[str], date_limits:List[str]=[], path_dir:str=None,
-                       automatic_stations:bool=True, data_type:str='vazao',
-                       hidrologic_variable:str='fluviometrica') -> None:
+                       automatic_stations:bool=True, data_type:str='vazoes',
+                       hidrologic_variable:str='fluviometricas') -> None:
     for station_id in stations_list:
         print('Download data to the station: ', station_id)
         
@@ -21,6 +21,8 @@ def download_from_list(stations_list:List[str], date_limits:List[str]=[], path_d
         else:
             station_url = f'{CONVENTIONAL_GAUGES}/{hidrologic_variable}/{station_id}/{station_id}_{data_type}.csv'
             dates_col = ['Data']
+        
+        print('url station: ', station_url)
             
         try:
             station_data = pd.read_csv(station_url,
@@ -51,8 +53,8 @@ def download_from_list(stations_list:List[str], date_limits:List[str]=[], path_d
 
 
 def download_from_shape(shape: str, date_limits: List[str]=[], path_dir: str=None,
-                        station_type:bool=True, data_type:str='vazao',
-                        hidrologic_variable:str='fluviometrica') -> None:
+                        automatic_stations:bool=True, data_type:str='vazoes',
+                        hidrologic_variable:str='fluviometricas') -> None:
     """
     This function automates the download of all gauges that are within a given 
     shapefile.
@@ -73,19 +75,21 @@ def download_from_shape(shape: str, date_limits: List[str]=[], path_dir: str=Non
                                       until present. The conventional stations 
                                       contains all the historic time series available.
         data_type (str, optional): The type of data you want to download. In 
-                                    fluviometric stations this can be: vazao or
+                                    fluviometric stations this can be: vazoes or
                                     cotas.
         hidrologic_variable (str, optional): If you are trying to download data
                                              from the conventional stations you
                                              have to determine if you want data
-                                             from pluviometric (pluviometrica) of
-                                             fluviometric (fluviometric) stations.
+                                             from pluviometric (pluviometricas) of
+                                             fluviometric (fluviometricas) stations.
                                              In 2923-10-25 to conventional station
                                              is available just data of fluviometric
                                              stations.
     """
     # This reads the inventory of gauges operated by ANA.
     inventory = pd.read_csv(INVENTORY_URL, delimiter=';')
+    if hidrologic_variable == 'fluviometricas':
+        inventory = inventory.query('TipoEstacao == "FLU"')
     
     # Reads the shapefile of the study area into a GeoDataFrame.
     gdf_shape = gpd.read_file(shape)
@@ -101,11 +105,11 @@ def download_from_shape(shape: str, date_limits: List[str]=[], path_dir: str=Non
     stations_in = gpd.sjoin(gdf_inventory,
                             gdf_shape,
                             op='within')
-    
+
     # Gets a list with the id of each station.
     stations_list = stations_in['Codigo'].to_list()
     
     # Realizes the download of the selected stations data.
     download_from_list(stations_list, date_limits=date_limits, path_dir=path_dir,
-                       station_type=station_type, hidrologic_variable=hidrologic_variable,
+                       automatic_stations=automatic_stations, hidrologic_variable=hidrologic_variable,
                        data_type=data_type)
