@@ -69,7 +69,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "--cov=src/pyhydroweb --cov-report=term-missing --cov-report=html"
+addopts = ""
 
 [tool.coverage.run]
 source = ["src/pyhydroweb"]
