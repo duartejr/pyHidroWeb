@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyhydroweb"
+version = "1.0.0"
+description = "Download Brazilian hydrological data from HidroWeb portal"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "pyHidroWeb Contributors"}
+]
+keywords = [
+    "hydrology",
+    "brazil",
+    "data",
+    "download",
+    "ana",
+    "hidroweb",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
+
+dependencies = [
+    "pandas>=1.0.0",
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+xarray = ["xarray>=0.16.0"]
+geopandas = ["geopandas>=0.8.0", "shapely>=1.7.0"]
+all = [
+    "xarray>=0.16.0",
+    "geopandas>=0.8.0",
+    "shapely>=1.7.0",
+]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.12.0",
+    "black>=21.0",
+    "flake8>=3.9.0",
+    "mypy>=0.910",
+    "isort>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/duartejr/pyhidroweb"
+Documentation = "https://github.com/duartejr/pyhidroweb"
+Repository = "https://github.com/duartejr/pyhidroweb.git"
+"Bug Tracker" = "https://github.com/duartejr/pyhidroweb/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ""
+
+[tool.coverage.run]
+source = ["src/pyhydroweb"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py37", "py38", "py39", "py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.7"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
