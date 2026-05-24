@@ -224,6 +224,230 @@ download_from_shape(
 
 ---
 
+## Metadata Module (`pyhydroweb.metadata`)
+
+Station metadata access, inventory management, and area selection functionality.
+
+### `download_station_inventory()`
+
+Download the latest station inventory from SNIRH.
+
+```python
+download_station_inventory() -> pd.DataFrame
+```
+
+Downloads the official inventário.zip file containing all station metadata including coordinates, elevation, and other details.
+
+**Returns:** DataFrame with all available stations and their metadata
+
+**Example:**
+
+```python
+from pyhydroweb import download_station_inventory
+
+inventory = download_station_inventory()
+print(f"Total stations: {len(inventory)}")
+```
+
+### `get_cached_inventory()`
+
+Get station inventory with intelligent caching.
+
+```python
+get_cached_inventory(
+    max_age_days: int = 30,
+    force_refresh: bool = False
+) -> pd.DataFrame
+```
+
+Downloads and caches inventory locally. Uses cache if available and fresh.
+
+**Parameters:**
+
+- **max_age_days**: Maximum cache age in days (default: 30)
+- **force_refresh**: Force download even if cache exists
+
+**Example:**
+
+```python
+from pyhydroweb import get_cached_inventory
+
+# Use cached version if less than 30 days old
+inventory = get_cached_inventory()
+
+# Force fresh download
+fresh_inventory = get_cached_inventory(force_refresh=True)
+```
+
+### `get_station_metadata()`
+
+Get metadata for a specific station.
+
+```python
+get_station_metadata(station_code: str) -> Optional[Dict]
+```
+
+**Parameters:**
+
+- **station_code**: Station code to lookup
+
+**Returns:** Dictionary with station metadata or None if not found
+
+**Example:**
+
+```python
+from pyhydroweb import get_station_metadata
+
+metadata = get_station_metadata("34879500")
+if metadata:
+    print(f"Station: {metadata['Nome']}")
+    print(f"Coordinates: {metadata['Latitude']}, {metadata['Longitude']}")
+    print(f"Elevation: {metadata['Altitude']} m")
+```
+
+### `get_all_stations()`
+
+Get all available stations.
+
+```python
+get_all_stations(station_type: Optional[str] = None) -> pd.DataFrame
+```
+
+**Parameters:**
+
+- **station_type**: Filter by 'FLU' (fluviometric) or 'PLU' (pluviometric)
+
+**Example:**
+
+```python
+from pyhydroweb import get_all_stations
+
+# All stations
+all_stations = get_all_stations()
+
+# Fluviometric only
+fluviometric = get_all_stations(station_type="FLU")
+```
+
+### `get_stations_in_bounds()`
+
+Get stations within geographic bounds.
+
+```python
+get_stations_in_bounds(
+    min_lat: float,
+    max_lat: float,
+    min_lon: float,
+    max_lon: float,
+    station_type: Optional[str] = None
+) -> pd.DataFrame
+```
+
+**Parameters:**
+
+- **min_lat**, **max_lat**: Latitude range
+- **min_lon**, **max_lon**: Longitude range
+- **station_type**: Optional filter ('FLU' or 'PLU')
+
+**Example:**
+
+```python
+from pyhydroweb import get_stations_in_bounds
+
+# Get stations in a study area
+stations = get_stations_in_bounds(
+    min_lat=-16, max_lat=-15,
+    min_lon=-46, max_lon=-45,
+    station_type="FLU"
+)
+print(f"Found {len(stations)} fluviometric stations")
+```
+
+### `get_nearby_stations()`
+
+Get stations near a geographic point.
+
+```python
+get_nearby_stations(
+    latitude: float,
+    longitude: float,
+    radius_km: float = 50,
+    station_type: Optional[str] = None
+) -> pd.DataFrame
+```
+
+**Parameters:**
+
+- **latitude**: Reference latitude
+- **longitude**: Reference longitude
+- **radius_km**: Search radius in kilometers (default: 50)
+- **station_type**: Optional filter ('FLU' or 'PLU')
+
+**Returns:** DataFrame sorted by distance
+
+**Example:**
+
+```python
+from pyhydroweb import get_nearby_stations
+
+# Find stations within 100 km
+nearby = get_nearby_stations(-15.5, -45.5, radius_km=100)
+print(f"Found {len(nearby)} nearby stations:")
+for _, station in nearby.iterrows():
+    print(f"  {station['Nome']} ({station['distance_km']:.1f} km)")
+```
+
+### `get_stations_in_polygon()`
+
+Get stations within a polygon area.
+
+```python
+get_stations_in_polygon(
+    polygon_coords: List[Tuple[float, float]],
+    station_type: Optional[str] = None
+) -> pd.DataFrame
+```
+
+Requires geopandas for spatial operations.
+
+**Parameters:**
+
+- **polygon_coords**: List of (latitude, longitude) tuples
+- **station_type**: Optional filter ('FLU' or 'PLU')
+
+**Example:**
+
+```python
+from pyhydroweb import get_stations_in_polygon
+
+# Define study area
+polygon = [
+    (-16, -46), (-16, -45),
+    (-15, -45), (-15, -46)
+]
+
+stations = get_stations_in_polygon(polygon, station_type="FLU")
+```
+
+### `clear_metadata_cache()`
+
+Clear cached metadata files.
+
+```python
+clear_metadata_cache() -> None
+```
+
+**Example:**
+
+```python
+from pyhydroweb import clear_metadata_cache
+
+# Remove cache to force fresh download on next use
+clear_metadata_cache()
+```
+
+---
+
 ## Validators Module (`pyhydroweb.validators`)
 
 ### `validate_date_format()`

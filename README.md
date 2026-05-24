@@ -11,6 +11,9 @@ A Python library for downloading Brazilian hydrological data from the HidroWeb p
 - **Flexible Output**: Export data as pandas DataFrame or xarray Dataset
 - **Batch Downloads**: Download data for multiple stations at once
 - **Shapefile Support**: Download data for all stations within a geographic area
+- **Station Metadata**: Access comprehensive station information (coordinates, elevation, name)
+- **Area Selection**: Select stations by geographic bounds, polygon, or proximity
+- **Smart Caching**: Automatic caching of station metadata with refresh capability
 - **Robust Error Handling**: Comprehensive exception handling and validation
 - **Logging**: Built-in logging for debugging and monitoring
 - **Type Hints**: Full type annotation for better code quality
@@ -109,6 +112,57 @@ download_from_shape(
     path_dir="./hydro_data/",
     date_limits=["2020-01-01", "2020-12-31"]
 )
+```
+
+### Access Station Metadata
+
+```python
+from pyhydroweb import get_station_metadata, get_nearby_stations, get_stations_in_bounds
+
+# Get metadata for a specific station
+metadata = get_station_metadata("34879500")
+print(f"Station: {metadata['Nome']}")
+print(f"Location: {metadata['Latitude']}, {metadata['Longitude']}")
+print(f"Elevation: {metadata['Altitude']} m")
+
+# Find stations near a location (within 50 km)
+nearby = get_nearby_stations(latitude=-15.5, longitude=-45.5, radius_km=50)
+print(f"Found {len(nearby)} nearby stations")
+
+# Get stations within geographic bounds
+stations = get_stations_in_bounds(
+    min_lat=-16, max_lat=-15,
+    min_lon=-46, max_lon=-45,
+    station_type="FLU"  # Fluviometric only
+)
+```
+
+### Select Stations by Area (Polygon)
+
+```python
+from pyhydroweb import get_stations_in_polygon
+
+# Define study area as polygon (lat, lon) coordinates
+polygon = [
+    (-16, -46), (-16, -45),
+    (-15, -45), (-15, -46)
+]
+
+stations = get_stations_in_polygon(polygon, station_type="FLU")
+print(f"Found {len(stations)} stations in study area")
+```
+
+### Access Metadata from Downloaded Data
+
+```python
+from pyhydroweb import download_hidroweb_data
+
+data = download_hidroweb_data(34879500, data_type=3)
+
+# Access metadata stored in DataFrame attributes
+print(data.attrs["station_name"])
+print(data.attrs["latitude"])
+print(data.attrs["longitude"])
 ```
 
 ## API Reference
