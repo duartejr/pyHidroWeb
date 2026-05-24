@@ -19,7 +19,7 @@ class TestExtractData:
 
     def test_extract_flow_data(self, sample_xml_response):
         """Test extraction of flow (Vazão) data."""
-        data, consistency, dates = extract_data(sample_xml_response, 3)
+        data, consistency, dates, metadata = extract_data(sample_xml_response, 3)
 
         assert len(data) == 31
         assert len(consistency) == 31
@@ -28,10 +28,11 @@ class TestExtractData:
         assert data[1] == 11.2
         assert data[2] is None  # Empty value
         assert consistency[0] == 1
+        assert isinstance(metadata, dict)
 
     def test_extract_rainfall_data(self, sample_rainfall_xml):
         """Test extraction of rainfall (Chuva) data."""
-        data, consistency, dates = extract_data(sample_rainfall_xml, 2)
+        data, consistency, dates, metadata = extract_data(sample_rainfall_xml, 2)
 
         assert len(data) == 29  # February 2020 has 29 days (leap year)
         assert len(consistency) == 29
@@ -39,6 +40,7 @@ class TestExtractData:
         assert data[0] == 5.0
         assert data[2] is None
         assert consistency[0] == 2
+        assert isinstance(metadata, dict)
 
     def test_invalid_data_type(self, sample_xml_response):
         """Test that invalid data type raises error."""
@@ -50,7 +52,7 @@ class TestExtractData:
 
     def test_date_parsing(self, sample_xml_response):
         """Test that dates are parsed correctly."""
-        data, consistency, dates = extract_data(sample_xml_response, 3)
+        data, consistency, dates, metadata = extract_data(sample_xml_response, 3)
 
         assert isinstance(dates[0], datetime)
         assert dates[0].year == 2020
@@ -59,7 +61,7 @@ class TestExtractData:
 
     def test_consistency_levels_preserved(self, sample_xml_response):
         """Test that consistency levels are preserved for all days."""
-        data, consistency, dates = extract_data(sample_xml_response, 3)
+        data, consistency, dates, metadata = extract_data(sample_xml_response, 3)
 
         assert all(c == 1 for c in consistency)
 

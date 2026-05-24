@@ -35,12 +35,12 @@ HIDROWEB_API_URL = "http://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroSerieHi
 
 def extract_data(
     data: ET.Element, data_type: int
-) -> Tuple[List[Optional[float]], List[int], List[datetime]]:
+) -> Tuple[List[Optional[float]], List[int], List[datetime], dict]:
     """
-    Extract hydrological data from XML response.
+    Extract hydrological data and metadata from XML response.
 
     Parses an XML structure containing historical series data and extracts values
-    for either rainfall or flow, along with consistency levels and dates.
+    for either rainfall or flow, along with consistency levels, dates, and metadata.
 
     Args:
         data: XML element containing the hydrological data
@@ -51,6 +51,7 @@ def extract_data(
         - list_data: Extracted values (float or None) for each day
         - list_consistency: Consistency levels for each value
         - list_month_dates: Datetime objects for each day
+        - metadata: Dictionary with station metadata (coordinates, name, etc.)
 
     Raises:
         InvalidDataTypeError: If data_type is not 2 or 3
@@ -61,8 +62,50 @@ def extract_data(
     list_data = []
     list_consistency = []
     list_month_dates = []
+    metadata = {}
 
     try:
+        # Extract station metadata from XML root
+        station_elem = data.find("EstacaoMetaDados")
+        if station_elem is not None:
+            metadata["codigo"] = (
+                station_elem.findtext("Codigo") or None
+            )
+            metadata["nome"] = (
+                station_elem.findtext("Nome") or None
+            )
+            metadata["latitude"] = None
+            metadata["longitude"] = None
+            metadata["altitude"] = None
+
+            try:
+                lat_text = station_elem.findtext("Latitude")
+                if lat_text:
+                    metadata["latitude"] = float(lat_text)
+            except (ValueError, TypeError):
+                pass
+
+            try:
+                lon_text = station_elem.findtext("Longitude")
+                if lon_text:
+                    metadata["longitude"] = float(lon_text)
+            except (ValueError, TypeError):
+                pass
+
+            try:
+                alt_text = station_elem.findtext("Altitude")
+                if alt_text:
+                    metadata["altitude"] = float(alt_text)
+            except (ValueError, TypeError):
+                pass
+
+            metadata["tipo_estacao"] = (
+                station_elem.findtext("TipoEstacao") or None
+            )
+            metadata["responsavel"] = (
+                station_elem.findtext("ResponsavelTecnico") or None
+            )
+
         for series in data.iter("SerieHistorica"):
             consistencia_elem = series.find("NivelConsistencia")
             date_elem = series.find("DataHora")
@@ -106,7 +149,7 @@ def extract_data(
     except Exception as e:
         raise DataParsingError(f"Unexpected error during data extraction: {e}") from e
 
-    return list_data, list_consistency, list_month_dates
+    return list_data, list_consistency, list_month_dates, metadata
 
 
 def download_hidroweb_data(
@@ -181,7 +224,7 @@ def download_hidroweb_data(
     except ET.ParseError as e:
         raise DataParsingError(f"Failed to parse API response as XML: {e}") from e
 
-    data, consistency, dates = extract_data(root, data_type)
+    data, consistency, dates, metadata = extract_data(root, data_type)
 
     data_type_name = get_data_type_name(data_type)
 
@@ -196,7 +239,19 @@ def download_hidroweb_data(
     df = df.set_index("time")
 
     if output_format == 0:
-        logger.debug("Returning pandas DataFrame")
+        logger.debug("Returning pandas DataFrame with metadata attributes")
+        # Attach metadata as DataFrame attributes
+        df.attrs["metadata"] = metadata
+        if metadata.get("latitude") is not None:
+            df.attrs["latitude"] = metadata["latitude"]
+        if metadata.get("longitude") is not None:
+            df.attrs["longitude"] = metadata["longitude"]
+        if metadata.get("altitude") is not None:
+            df.attrs["altitude"] = metadata["altitude"]
+        if metadata.get("nome") is not None:
+            df.attrs["station_name"] = metadata["nome"]
+        if metadata.get("codigo") is not None:
+            df.attrs["station_code"] = metadata["codigo"]
         return df
 
     elif output_format == 1:
@@ -208,11 +263,23 @@ def download_hidroweb_data(
                 "Install it with: pip install xarray"
             ) from e
 
-        logger.debug("Converting to xarray Dataset")
+        logger.debug("Converting to xarray Dataset with metadata")
         ds = df.to_xarray()
         ds[data_type_name].attrs["units"] = get_data_type_unit(data_type)
         ds[data_type_name].attrs["long_name"] = (
             data_type_name.replace("_", " ").title()
         )
+
+        # Add metadata as dataset attributes
+        if metadata.get("latitude") is not None:
+            ds.attrs["latitude"] = metadata["latitude"]
+        if metadata.get("longitude") is not None:
+            ds.attrs["longitude"] = metadata["longitude"]
+        if metadata.get("altitude") is not None:
+            ds.attrs["altitude"] = metadata["altitude"]
+        if metadata.get("nome") is not None:
+            ds.attrs["station_name"] = metadata["nome"]
+        if metadata.get("codigo") is not None:
+            ds.attrs["station_code"] = metadata["codigo"]
 
         return ds
