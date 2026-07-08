@@ -1,0 +1,33 @@
+name: Update repository About
+
+# Manually triggered. Updates the GitHub repository "About" sidebar
+# (description + topics). Editing the description needs administration
+# permission on the repository token; topics need push access.
+on:
+  workflow_dispatch:
+
+permissions:
+  administration: write
+  metadata: read
+
+jobs:
+  about:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set description and topics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh repo edit "$GITHUB_REPOSITORY" \
+            --description "Biblioteca Python para obter, padronizar, analisar e exportar dados hidrológicos da ANA (tradução do pacote R hydroDataBR)." \
+            --add-topic hydrology \
+            --add-topic brazil \
+            --add-topic ana \
+            --add-topic hidroweb \
+            --add-topic hydrological-data \
+            --add-topic water-resources \
+            --add-topic streamflow \
+            --add-topic rainfall \
+            --add-topic python \
+            --add-topic pandas
