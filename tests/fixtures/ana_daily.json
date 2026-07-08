@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "EstacaoCodigo": "01234567",
+      "NivelConsistencia": "1",
+      "Data": "2020-01-01",
+      "Chuva01": "5,0",
+      "Chuva01Status": "1",
+      "Vazao01": "10,0",
+      "Vazao01Status": "1"
+    },
+    {
+      "EstacaoCodigo": "01234567",
+      "NivelConsistencia": "2",
+      "Data": "2020-01-01",
+      "Chuva01": "7,0",
+      "Chuva01Status": "2",
+      "Vazao01": "12,0",
+      "Vazao01Status": "2"
+    }
+  ]
+}

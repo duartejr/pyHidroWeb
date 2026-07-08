@@ -12,6 +12,7 @@ def sample_xml_response():
     xml_string = """
     <HidroSerieHistorica>
         <SerieHistorica>
+            <EstacaoCodigo>34879500</EstacaoCodigo>
             <NivelConsistencia>1</NivelConsistencia>
             <DataHora>2020-01-01 00:00:00</DataHora>
             <Vazao01>10.5</Vazao01>
@@ -57,6 +58,7 @@ def sample_rainfall_xml():
     xml_string = """
     <HidroSerieHistorica>
         <SerieHistorica>
+            <EstacaoCodigo>34879500</EstacaoCodigo>
             <NivelConsistencia>2</NivelConsistencia>
             <DataHora>2020-02-01 00:00:00</DataHora>
             <Chuva01>5.0</Chuva01>
@@ -101,6 +103,7 @@ def mock_api_response():
     xml_content = """
     <HidroSerieHistorica>
         <SerieHistorica>
+            <EstacaoCodigo>34879500</EstacaoCodigo>
             <NivelConsistencia>1</NivelConsistencia>
             <DataHora>2020-01-01 00:00:00</DataHora>
             <Vazao01>10.5</Vazao01>

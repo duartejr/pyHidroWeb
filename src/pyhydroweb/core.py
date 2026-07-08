@@ -1,285 +1,167 @@
-"""Core functionality for downloading and parsing hydrological data from HidroWeb."""
+"""Legacy pyHidroWeb API, kept as thin wrappers over the new modules.
+
+.. deprecated:: 2.0
+   Use :func:`pyhydroweb.get_ana_data` (or
+   :func:`pyhydroweb.api_daily.get_ana_daily_series`) instead.  These wrappers
+   exist so pre-2.0 scripts keep working; they now sit on top of the verified
+   HTTPS legacy route and the standardized daily contract.
+
+Notes on what changed in 2.0:
+
+- the API URL moved from ``http://`` to ``https://telemetriaws1.ana.gov.br``;
+- the previous ``EstacaoMetaDados`` metadata extraction was removed — that
+  element does not exist in real ``HidroSerieHistorica`` responses (station
+  metadata lives in the authenticated inventory route instead; see
+  :func:`pyhydroweb.get_ana_stations` and the bundled inventory in
+  :mod:`pyhydroweb.stations`).
+"""
+
+from __future__ import annotations
 
 import logging
+import warnings
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional, Tuple, Union
-import calendar
 
-import requests
 import pandas as pd
 
-from .exceptions import (
-    InvalidDataTypeError,
-    InvalidOutputFormatError,
-    DownloadError,
-    DataParsingError,
-    MissingDependencyError,
-)
+from .api_daily import LEGACY_VARIABLE_SPECS, get_ana_daily_series
+from .contract import standardize_ana_daily_table
+from .exceptions import InvalidDataTypeError, MissingDependencyError
 from .validators import (
     validate_data_type,
     validate_date_range,
     validate_output_format,
     validate_station_code,
 )
-from .utils import (
-    get_data_type_name,
-    get_data_type_unit,
-)
 
 logger = logging.getLogger(__name__)
 
-# API Configuration
-HIDROWEB_API_URL = "http://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroSerieHistorica"
+# Kept for backward compatibility; the canonical constant now lives in
+# pyhydroweb.http (LEGACY_BASE_URL) and uses HTTPS.
+HIDROWEB_API_URL = (
+    "https://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroSerieHistorica"
+)
+
+_DATA_TYPE_VARIABLES = {2: "rainfall", 3: "discharge"}
 
 
 def extract_data(
     data: ET.Element, data_type: int
 ) -> Tuple[List[Optional[float]], List[int], List[datetime], dict]:
+    """Extract daily values from a legacy ``HidroSerieHistorica`` XML element.
+
+    .. deprecated:: 2.0
+       Use :func:`pyhydroweb.read_ana_xml` for files or
+       :func:`pyhydroweb.get_ana_data` for downloads — both return the
+       standardized daily contract.
+
+    Returns ``(values, consistency_levels, dates, metadata)``.  ``metadata``
+    is always an empty dict: the ``EstacaoMetaDados`` element previously
+    parsed here does not exist in real ANA responses.
     """
-    Extract hydrological data and metadata from XML response.
-
-    Parses an XML structure containing historical series data and extracts values
-    for either rainfall or flow, along with consistency levels, dates, and metadata.
-
-    Args:
-        data: XML element containing the hydrological data
-        data_type: Type of data (2 for rainfall, 3 for flow)
-
-    Returns:
-        Tuple containing:
-        - list_data: Extracted values (float or None) for each day
-        - list_consistency: Consistency levels for each value
-        - list_month_dates: Datetime objects for each day
-        - metadata: Dictionary with station metadata (coordinates, name, etc.)
-
-    Raises:
-        InvalidDataTypeError: If data_type is not 2 or 3
-        DataParsingError: If XML parsing fails
-    """
+    warnings.warn(
+        "extract_data() is deprecated; use read_ana_xml()/get_ana_data() "
+        "which return the standardized daily contract.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     validate_data_type(data_type)
+    variable = _DATA_TYPE_VARIABLES[data_type]
 
-    list_data = []
-    list_consistency = []
-    list_month_dates = []
-    metadata = {}
-
-    try:
-        # Extract station metadata from XML root
-        station_elem = data.find("EstacaoMetaDados")
-        if station_elem is not None:
-            metadata["codigo"] = (
-                station_elem.findtext("Codigo") or None
-            )
-            metadata["nome"] = (
-                station_elem.findtext("Nome") or None
-            )
-            metadata["latitude"] = None
-            metadata["longitude"] = None
-            metadata["altitude"] = None
-
-            try:
-                lat_text = station_elem.findtext("Latitude")
-                if lat_text:
-                    metadata["latitude"] = float(lat_text)
-            except (ValueError, TypeError):
-                pass
-
-            try:
-                lon_text = station_elem.findtext("Longitude")
-                if lon_text:
-                    metadata["longitude"] = float(lon_text)
-            except (ValueError, TypeError):
-                pass
-
-            try:
-                alt_text = station_elem.findtext("Altitude")
-                if alt_text:
-                    metadata["altitude"] = float(alt_text)
-            except (ValueError, TypeError):
-                pass
-
-            metadata["tipo_estacao"] = (
-                station_elem.findtext("TipoEstacao") or None
-            )
-            metadata["responsavel"] = (
-                station_elem.findtext("ResponsavelTecnico") or None
-            )
-
-        for series in data.iter("SerieHistorica"):
-            consistencia_elem = series.find("NivelConsistencia")
-            date_elem = series.find("DataHora")
-
-            if consistencia_elem is None or date_elem is None:
-                logger.warning("Missing consistency or date element in XML data")
-                continue
-
-            consistencia = int(consistencia_elem.text)
-            date_str = date_elem.text
-            date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-
-            last_day = calendar.monthrange(date.year, date.month)[1]
-            month_dates = [date + timedelta(days=k) for k in range(last_day)]
-
-            for day in range(last_day):
-                if data_type == 3:
-                    field_name = f"Vazao{day + 1:02d}"
-                elif data_type == 2:
-                    field_name = f"Chuva{day + 1:02d}"
-
-                value_elem = series.find(field_name)
-
-                if value_elem is None or value_elem.text is None:
-                    list_data.append(None)
-                else:
-                    try:
-                        list_data.append(float(value_elem.text))
-                    except ValueError:
-                        list_data.append(None)
-                        logger.debug(
-                            f"Could not convert value to float: {value_elem.text}"
-                        )
-
-                list_consistency.append(consistencia)
-
-            list_month_dates.extend(month_dates)
-
-    except ET.ParseError as e:
-        raise DataParsingError(f"Failed to parse XML data: {e}") from e
-    except Exception as e:
-        raise DataParsingError(f"Unexpected error during data extraction: {e}") from e
-
-    return list_data, list_consistency, list_month_dates, metadata
+    records = []
+    for element in data.iter():
+        if element.tag.rsplit("}", 1)[-1] != "SerieHistorica":
+            continue
+        records.append(
+            {child.tag.rsplit("}", 1)[-1]: child.text for child in element}
+        )
+    if not records:
+        return [], [], [], {}
+    table = standardize_ana_daily_table(
+        pd.DataFrame(records), source_label="ANA WebService XML"
+    )
+    table = table[table["variable"] == variable]
+    values = [None if pd.isna(value) else float(value) for value in table["value"]]
+    consistency = [
+        int(level) if level is not None and str(level).isdigit() else 0
+        for level in table["consistency_level"]
+    ]
+    dates = [
+        datetime(day.year, day.month, day.day) for day in table["date"]
+    ]
+    return values, consistency, dates, {}
 
 
 def download_hidroweb_data(
-    station: Union[int, str],
+    station_code: Union[str, int],
     start_date: str = "",
     end_date: str = "",
     data_type: int = 3,
-    consistency_level: int = 0,
+    consistency_level: int = 2,
     output_format: int = 1,
-) -> Union[pd.DataFrame, "xr.Dataset"]:
+    timeout: int = 30,
+):
+    """Download one station's daily series from the ANA legacy route.
+
+    .. deprecated:: 2.0
+       Use :func:`pyhydroweb.get_ana_data` instead.
+
+    ``data_type``: 2 = rainfall, 3 = flow.  ``output_format``: 0 returns a
+    pandas DataFrame, 1 returns an xarray Dataset (requires xarray).
     """
-    Download Brazilian hydrological data from HidroWeb API.
-
-    Retrieves data from the National Water Agency (ANA) HidroWeb portal for
-    a specified station, optionally filtered by date range and data type.
-
-    Args:
-        station: Station code (numeric ID)
-        start_date: Start date in YYYY-MM-DD format. If empty, uses earliest available.
-        end_date: End date in YYYY-MM-DD format. If empty, uses latest available.
-        data_type: Type of data (2=Rainfall, 3=Flow). Default: 3
-        consistency_level: Data consistency (1=Raw, 2=Consolidated, 0=Both). Default: 0
-        output_format: Output format (0=DataFrame, 1=xarray Dataset). Default: 1
-
-    Returns:
-        Data in requested format (pandas DataFrame or xarray Dataset)
-
-    Raises:
-        InvalidDataTypeError: If data_type not in [2, 3]
-        InvalidOutputFormatError: If output_format not in [0, 1]
-        InvalidDateFormatError: If dates have invalid format
-        DownloadError: If API request fails
-        DataParsingError: If response parsing fails
-        MissingDependencyError: If xarray is needed but not installed
-
-    Example:
-        >>> data = download_hidroweb_data(34879500, "2020-01-01", "2020-01-31", 3, 1)
-    """
-    validate_station_code(station)
+    warnings.warn(
+        "download_hidroweb_data() is deprecated; use get_ana_data().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    validate_station_code(station_code)
     validate_data_type(data_type)
     validate_output_format(output_format)
     validate_date_range(start_date, end_date)
+    variable = _DATA_TYPE_VARIABLES[data_type]
+    consistency = str(consistency_level) if consistency_level in (1, 2) else "2"
 
-    logger.info(
-        f"Downloading HidroWeb data for station {station}, "
-        f"data_type={data_type}, period={start_date}:{end_date}"
+    daily = get_ana_daily_series(
+        station_code,
+        variable,
+        date_start=start_date or None,
+        date_end=end_date or None,
+        consistency_level=consistency,
+        timeout=timeout,
     )
+    if daily.empty:
+        logger.warning("No data returned for station %s.", station_code)
+        return None
 
-    params = {
-        "codEstacao": station,
-        "dataInicio": start_date,
-        "dataFim": end_date,
-        "tipoDados": data_type,
-        "nivelConsistencia": consistency_level,
-    }
-
-    try:
-        response = requests.get(HIDROWEB_API_URL, params=params, timeout=30)
-        response.raise_for_status()
-    except requests.exceptions.Timeout as e:
-        raise DownloadError("API request timed out after 30 seconds") from e
-    except requests.exceptions.ConnectionError as e:
-        raise DownloadError(f"Failed to connect to HidroWeb API: {e}") from e
-    except requests.exceptions.HTTPError as e:
-        raise DownloadError(f"HTTP error from HidroWeb API: {e}") from e
-    except requests.exceptions.RequestException as e:
-        raise DownloadError(f"Failed to download data from API: {e}") from e
-
-    try:
-        tree = ET.ElementTree(ET.fromstring(response.content))
-        root = tree.getroot()
-    except ET.ParseError as e:
-        raise DataParsingError(f"Failed to parse API response as XML: {e}") from e
-
-    data, consistency, dates, metadata = extract_data(root, data_type)
-
-    data_type_name = get_data_type_name(data_type)
-
-    df = pd.DataFrame(
+    column = "flow_rate" if variable == "discharge" else "precipitation"
+    frame = pd.DataFrame(
         {
-            "time": dates,
-            f"{data_type_name}_consistency_level": consistency,
-            data_type_name: data,
-        }
+            column: daily["value"].to_numpy(),
+            "consistency_level": daily["consistency_level"].to_numpy(),
+        },
+        index=pd.to_datetime(daily["date"]),
     )
-
-    df = df.set_index("time")
+    frame.index.name = "time"
 
     if output_format == 0:
-        logger.debug("Returning pandas DataFrame with metadata attributes")
-        # Attach metadata as DataFrame attributes
-        df.attrs["metadata"] = metadata
-        if metadata.get("latitude") is not None:
-            df.attrs["latitude"] = metadata["latitude"]
-        if metadata.get("longitude") is not None:
-            df.attrs["longitude"] = metadata["longitude"]
-        if metadata.get("altitude") is not None:
-            df.attrs["altitude"] = metadata["altitude"]
-        if metadata.get("nome") is not None:
-            df.attrs["station_name"] = metadata["nome"]
-        if metadata.get("codigo") is not None:
-            df.attrs["station_code"] = metadata["codigo"]
-        return df
+        return frame
 
-    elif output_format == 1:
-        try:
-            import xarray as xr
-        except ImportError as e:
-            raise MissingDependencyError(
-                "xarray is required for output_format=1. "
-                "Install it with: pip install xarray"
-            ) from e
-
-        logger.debug("Converting to xarray Dataset with metadata")
-        ds = df.to_xarray()
-        ds[data_type_name].attrs["units"] = get_data_type_unit(data_type)
-        ds[data_type_name].attrs["long_name"] = (
-            data_type_name.replace("_", " ").title()
-        )
-
-        # Add metadata as dataset attributes
-        if metadata.get("latitude") is not None:
-            ds.attrs["latitude"] = metadata["latitude"]
-        if metadata.get("longitude") is not None:
-            ds.attrs["longitude"] = metadata["longitude"]
-        if metadata.get("altitude") is not None:
-            ds.attrs["altitude"] = metadata["altitude"]
-        if metadata.get("nome") is not None:
-            ds.attrs["station_name"] = metadata["nome"]
-        if metadata.get("codigo") is not None:
-            ds.attrs["station_code"] = metadata["codigo"]
-
-        return ds
+    try:
+        import xarray as xr
+    except ImportError:
+        raise MissingDependencyError(
+            "output_format=1 requires xarray (pip install pyhydroweb[xarray]); "
+            "use output_format=0 for a pandas DataFrame."
+        ) from None
+    dataset = frame.to_xarray()
+    _, unit = LEGACY_VARIABLE_SPECS[variable]
+    dataset[column].attrs["units"] = (
+        "m$\\,$s$^{-1}$" if variable == "discharge" else "mm"
+    )
+    dataset[column].attrs["long_name"] = (
+        "Flow rate" if variable == "discharge" else "Precipitation"
+    )
+    dataset[column].attrs["source_unit"] = unit
+    return dataset

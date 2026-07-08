@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ArrayOfSerieHistorica>
+  <SerieHistorica>
+    <EstacaoCodigo>01234567</EstacaoCodigo>
+    <NivelConsistencia>1</NivelConsistencia>
+    <Data>01/01/2020</Data>
+    <Cota01>100</Cota01>
+    <Cota01Status>1</Cota01Status>
+    <Cota02>101</Cota02>
+    <Cota02Status>1</Cota02Status>
+  </SerieHistorica>
+  <SerieHistorica>
+    <EstacaoCodigo>01234567</EstacaoCodigo>
+    <NivelConsistencia>2</NivelConsistencia>
+    <Data>01/01/2020</Data>
+    <Cota01>110</Cota01>
+    <Cota01Status>2</Cota01Status>
+    <Cota02>111</Cota02>
+    <Cota02Status>1</Cota02Status>
+  </SerieHistorica>
+</ArrayOfSerieHistorica>

@@ -1,349 +1,197 @@
 # pyHidroWeb
 
-[![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A Python library for downloading Brazilian hydrological data from the HidroWeb portal of the National Water Agency (ANA).
+Biblioteca Python para obter, padronizar, analisar, visualizar e exportar dados
+hidrológicos da Agência Nacional de Águas e Saneamento Básico (ANA).
 
-## Features
+A partir da versão 2.0, o pyHidroWeb é uma **tradução para Python do pacote R
+[hydroDataBR](https://github.com/hydrostat/hydroDataBR)** (hydro_stat/UFMG,
+MIT), cobrindo toda a sua API pública: aquisição pela HidroWebService
+autenticada da ANA e pelo WebService legado, leitura de arquivos locais do
+HidroWeb, contrato diário padronizado, análises hidrológicas, diagnósticos
+fluviométricos, gráficos, tabelas e exportação.
 
-- **Simple API**: Easy-to-use functions for downloading hydrological data
-- **Multiple Data Types**: Support for both rainfall (precipitation) and flow (discharge) data
-- **Flexible Output**: Export data as pandas DataFrame or xarray Dataset
-- **Batch Downloads**: Download data for multiple stations at once
-- **Shapefile Support**: Download data for all stations within a geographic area
-- **Station Metadata**: Access comprehensive station information (coordinates, elevation, name)
-- **Area Selection**: Select stations by geographic bounds, polygon, or proximity
-- **Smart Caching**: Automatic caching of station metadata with refresh capability
-- **Robust Error Handling**: Comprehensive exception handling and validation
-- **Logging**: Built-in logging for debugging and monitoring
-- **Type Hints**: Full type annotation for better code quality
-
-## Installation
-
-### Basic Installation
+## Instalação
 
 ```bash
-pip install pyhydroweb
-```
-
-### With Optional Dependencies
-
-For xarray support:
-
-```bash
-pip install pyhydroweb[xarray]
-```
-
-For shapefile support:
-
-```bash
-pip install pyhydroweb[geopandas]
-```
-
-For all features:
-
-```bash
+pip install pyhydroweb              # núcleo (pandas, numpy, requests, pyarrow)
+pip install pyhydroweb[plot]        # + matplotlib (gráficos)
+pip install pyhydroweb[geo]         # + geopandas/shapely (shapefiles)
+pip install pyhydroweb[xarray]      # + xarray (saída legada)
+pip install pyhydroweb[vertices]    # + pyreadr (vértices de seções transversais)
 pip install pyhydroweb[all]
 ```
 
-### Development Installation
+## API pública (equivalente 1:1 ao hydroDataBR)
 
-```bash
-git clone https://github.com/duartejr/pyhidroweb.git
-cd pyhidroweb
-pip install -e ".[dev]"
+| Grupo | Funções |
+|---|---|
+| Autenticação | `ana_authenticate` |
+| Aquisição | `get_ana_data`, `get_ana_data_batch`, `get_ana_stations`, `download_ana_cross_section_vertices` |
+| Leitura local | `read_ana_xml`, `read_ana_json`, `read_hidroweb`, `read_hidroweb_cross_sections` |
+| Filtragem | `filter_ana_stations` |
+| Análise | `analyze_hydro_data`, `diagnose_daily_hydrometry`, `diagnose_station_hydrometry` |
+| Saída | `plot_hydro_data`, `table_hydro_data`, `write_hydro_data` |
+
+## O contrato diário padronizado
+
+Todas as fontes (XML legado, JSON da API, CSV/ZIP do HidroWeb) são
+normalizadas para o mesmo DataFrame de 8 colunas:
+
+```
+station_code | date | variable | value | unit | consistency_level | source_status | source
 ```
 
-## Quick Start
+- `variable`: `discharge` (m3/s), `stage` (cm) ou `rainfall` (mm)
+- `consistency_level`: `"2"` = consistido (preferido), `"1"` = bruto
+- Duplicatas por (estação, dia, variável) são resolvidas priorizando o dado
+  consistido, exatamente como no hydroDataBR.
 
-### Download Flow Data for a Single Station
+## Início rápido com o banco interno
+
+O pacote embute um retrato estático de dados da ANA (junho/2026, herdado do
+hydroDataBR): inventário com **37.584 estações**, 457 mil medições de
+descarga, curvas-chave e seções transversais — útil para buscas rápidas e
+diagnósticos offline.
 
 ```python
-from pyhydroweb import download_hidroweb_data
+import pyhydroweb as ph
 
-# Download flow data for station 34879500
-data = download_hidroweb_data(
-    station=34879500,
-    data_type=3,  # 3 for flow, 2 for rainfall
-    output_format=0  # 0 for pandas DataFrame, 1 for xarray Dataset
+# Estações fluviométricas em operação com dados de vazão no Piauí
+stations = ph.filter_ana_stations(
+    state_code="PI", product="discharge", is_operating=True
 )
+print(stations[["station_code", "station_name", "latitude", "longitude"]].head())
 
-print(data.head())
+# Produtos disponíveis para uma estação real (LUZILÂNDIA/PI)
+ph.table_hydro_data(None, "station_products", station_code="34879500")
 ```
 
-### Download with Date Range
+## Baixando séries diárias (WebService legado, sem credenciais)
 
 ```python
-from pyhydroweb import download_hidroweb_data
-
-# Download data for a specific date range
-data = download_hidroweb_data(
-    station=34879500,
+daily = ph.get_ana_data(
+    "daily_discharge",              # ou daily_stage / daily_rainfall
+    station_code="34879500",        # LUZILÂNDIA (PI)
     start_date="2020-01-01",
     end_date="2020-12-31",
-    data_type=3,
-    output_format=0
 )
-```
 
-### Download for Multiple Stations
-
-```python
-from pyhydroweb import download_from_list
-
-stations = ["34879500", "34880000", "34880100"]
-
-download_from_list(
-    stations_list=stations,
-    path_dir="./hydro_data/",
-    automatic_stations=True,
-    data_type="vazoes"
-)
-```
-
-### Download for Geographic Area (Shapefile)
-
-```python
-from pyhydroweb import download_from_shape
-
-# Download data for all stations within a shapefile boundary
-download_from_shape(
-    shape="study_area.shp",
-    path_dir="./hydro_data/",
-    date_limits=["2020-01-01", "2020-12-31"]
-)
-```
-
-### Access Station Metadata
-
-```python
-from pyhydroweb import get_station_metadata, get_nearby_stations, get_stations_in_bounds
-
-# Get metadata for a specific station
-metadata = get_station_metadata("34879500")
-print(f"Station: {metadata['Nome']}")
-print(f"Location: {metadata['Latitude']}, {metadata['Longitude']}")
-print(f"Elevation: {metadata['Altitude']} m")
-
-# Find stations near a location (within 50 km)
-nearby = get_nearby_stations(latitude=-15.5, longitude=-45.5, radius_km=50)
-print(f"Found {len(nearby)} nearby stations")
-
-# Get stations within geographic bounds
-stations = get_stations_in_bounds(
-    min_lat=-16, max_lat=-15,
-    min_lon=-46, max_lon=-45,
-    station_type="FLU"  # Fluviometric only
-)
-```
-
-### Select Stations by Area (Polygon)
-
-```python
-from pyhydroweb import get_stations_in_polygon
-
-# Define study area as polygon (lat, lon) coordinates
-polygon = [
-    (-16, -46), (-16, -45),
-    (-15, -45), (-15, -46)
-]
-
-stations = get_stations_in_polygon(polygon, station_type="FLU")
-print(f"Found {len(stations)} stations in study area")
-```
-
-### Access Metadata from Downloaded Data
-
-```python
-from pyhydroweb import download_hidroweb_data
-
-data = download_hidroweb_data(34879500, data_type=3)
-
-# Access metadata stored in DataFrame attributes
-print(data.attrs["station_name"])
-print(data.attrs["latitude"])
-print(data.attrs["longitude"])
-```
-
-## API Reference
-
-### `download_hidroweb_data()`
-
-Download hydrological data from HidroWeb API.
-
-**Parameters:**
-
-- `station` (int or str): Station code
-- `start_date` (str, optional): Start date in YYYY-MM-DD format
-- `end_date` (str, optional): End date in YYYY-MM-DD format
-- `data_type` (int): Type of data
-  - `2` = Rainfall (Chuva)
-  - `3` = Flow (Vazão)
-- `consistency_level` (int, optional): Data consistency
-  - `1` = Raw data
-  - `2` = Consolidated data
-  - `0` = Both (default)
-- `output_format` (int): Output format
-  - `0` = pandas DataFrame
-  - `1` = xarray Dataset (default)
-
-**Returns:** pandas DataFrame or xarray Dataset
-
-**Example:**
-
-```python
-data = download_hidroweb_data(
-    station=34879500,
-    start_date="2020-01-01",
+# Várias estações de uma vez, com relatório por estação
+batch = ph.get_ana_data_batch(
+    "daily_discharge", ["34879500", "34880000"], start_date="2020-01-01",
     end_date="2020-12-31",
-    data_type=3,
-    consistency_level=2,
-    output_format=1
 )
+print(batch["request_report"])
 ```
 
-### `download_from_list()`
+## API autenticada da ANA (inventário, medições, curvas-chave, seções)
 
-Download data for multiple stations.
-
-**Parameters:**
-
-- `stations_list` (list): List of station codes
-- `date_limits` (list, optional): [start_date, end_date]
-- `path_dir` (str, optional): Directory to save CSV files
-- `automatic_stations` (bool): Use automatic (True) or conventional (False) stations
-- `data_type` (str): Data type ('vazoes' or 'cotas')
-- `hidrologic_variable` (str): Variable type ('fluviometricas' or 'pluviometricas')
-
-**Example:**
-
-```python
-download_from_list(
-    stations_list=["34879500", "34880000"],
-    date_limits=["2020-01-01", "2020-12-31"],
-    path_dir="./data/",
-    automatic_stations=True
-)
-```
-
-### `download_from_shape()`
-
-Download data for all stations within a shapefile boundary.
-
-**Parameters:**
-
-- `shape` (str): Path to shapefile
-- `date_limits` (list, optional): [start_date, end_date]
-- `path_dir` (str, optional): Directory to save CSV files
-- `automatic_stations` (bool): Use automatic or conventional stations
-- `data_type` (str): Data type
-- `hidrologic_variable` (str): Variable type
-
-**Example:**
-
-```python
-download_from_shape(
-    shape="study_area.shp",
-    date_limits=["2020-01-01", "2020-12-31"],
-    path_dir="./data/",
-    hidrologic_variable="fluviometricas"
-)
-```
-
-## Error Handling
-
-pyHidroWeb provides specific exceptions for different error scenarios:
-
-```python
-from pyhydroweb import (
-    download_hidroweb_data,
-    PyHidroWebError,
-)
-from pyhydroweb.exceptions import (
-    InvalidDataTypeError,
-    InvalidDateFormatError,
-    DownloadError,
-)
-
-try:
-    data = download_hidroweb_data(34879500, data_type=5)
-except InvalidDataTypeError:
-    print("Invalid data type. Use 2 for rainfall or 3 for flow.")
-except DownloadError:
-    print("Failed to download data from API.")
-except PyHidroWebError as e:
-    print(f"An error occurred: {e}")
-```
-
-## Logging
-
-Enable logging to monitor operations:
-
-```python
-import logging
-from pyhydroweb import setup_logging
-
-# Set up logging
-setup_logging(level=logging.DEBUG)
-
-from pyhydroweb import download_hidroweb_data
-
-data = download_hidroweb_data(34879500, data_type=3)
-```
-
-## Testing
-
-Run the test suite:
+As rotas novas da HidroWebService exigem credenciais próprias cadastradas na
+ANA. Forneça-as por variáveis de ambiente (recomendado):
 
 ```bash
-# Install test dependencies
-pip install -e ".[dev]"
+export ANA_HIDROWEBSERVICE_IDENTIFIER="seu-identificador"
+export ANA_HIDROWEBSERVICE_PASSWORD="sua-senha"
+```
 
-# Run tests
+```python
+token = ph.ana_authenticate()   # lê as variáveis de ambiente
+
+inventory = ph.get_ana_stations(state_code="MG", token=token)
+
+measurements = ph.get_ana_data(
+    "discharge_measurements", data_source="api",
+    station_code="56460000", start_date="2019-01-01", end_date="2019-12-31",
+    token=token,
+)
+curves = ph.get_ana_data("rating_curves", data_source="api",
+                         station_code="56460000", token=token)
+```
+
+Segurança (herdada do hydroDataBR e reforçada aqui): o token vive apenas em
+memória e o `repr` oculta seu valor; corpos de erro HTTP são truncados e têm
+credenciais redigidas; janelas acima de 366 dias são divididas
+automaticamente; o download opcional de vértices **verifica SHA-256 por
+padrão**; colunas com nomes sensíveis são removidas antes de exportar.
+
+## Lendo arquivos locais do HidroWeb
+
+```python
+daily = ph.read_hidroweb("estacao.zip")            # ZIP/CSV do portal (Latin-1, ';')
+daily = ph.read_ana_xml("HidroSerieHistorica.xml") # XML legado salvo em disco
+daily = ph.read_ana_json("serie.json")             # JSON da API salvo em disco
+xs = ph.read_hidroweb_cross_sections("estacao.zip")  # PerfilTransversal.csv
+```
+
+## Análises
+
+```python
+ph.analyze_hydro_data(daily, "daily_availability")     # disponibilidade
+ph.analyze_hydro_data(daily, "daily_statistics")       # estatísticas
+ph.analyze_hydro_data(daily, "flow_duration")          # curva de permanência (Weibull)
+ph.analyze_hydro_data(daily, "flow_indices")           # QMLT, Q90, Q95
+ph.analyze_hydro_data(daily, "annual_maxima")          # máximas anuais + flags
+ph.analyze_hydro_data(daily, "low_flows")              # mínimas móveis (Q7 etc.)
+ph.analyze_hydro_data(daily, "rainfall_indices")       # ETCCDI: Rx1day, SDII, CDD...
+ph.analyze_hydro_data(daily, "rainfall_diagnostics")   # plausibilidade da chuva
+```
+
+## Diagnósticos fluviométricos
+
+```python
+diag = ph.diagnose_daily_hydrometry(daily)        # vazão x cota x curva-chave
+diag["summary"]
+diag["hydrometry_reference_source"]               # 'user' | 'internal_database'
+
+station_diag = ph.diagnose_station_hydrometry(station_code="56460000")
+```
+
+Quando o usuário não fornece medições/curvas, o banco interno (retrato
+2026-06) é usado como referência e a origem fica registrada no resultado.
+
+## Gráficos, tabelas e exportação
+
+```python
+fig = ph.plot_hydro_data(daily, "daily_series")         # matplotlib Figure
+fig = ph.plot_hydro_data(daily, "flow_duration")        # eixo probabilístico normal
+fig = ph.plot_hydro_data(daily, "daily_availability")   # heatmap mensal
+
+table = ph.table_hydro_data(daily, "daily_availability")
+
+ph.write_hydro_data(
+    {"daily": daily, "fdc": ph.analyze_hydro_data(daily, "flow_duration")},
+    "exportacao/", format="csv", manifest=True,
+)
+```
+
+## API legada (pré-2.0)
+
+`download_hidroweb_data`, `extract_data`, `download_from_list` e
+`download_from_shape` continuam funcionando como wrappers deprecados sobre os
+novos módulos (agora via HTTPS e com o contrato padronizado). Migre para
+`get_ana_data`/`get_ana_data_batch`.
+
+## Proveniência e créditos
+
+- Endpoints, schemas, algoritmos e o banco interno vêm do pacote R
+  [hydroDataBR](https://github.com/hydrostat/hydroDataBR) (Wilson Fernandes,
+  EHR/UFMG — grupo hydro_stat, licença MIT), usado como fonte de verdade
+  desta tradução.
+- As fixtures de teste em `tests/fixtures/` foram copiadas do hydroDataBR
+  para validar os parsers Python contra as mesmas entradas do pacote R.
+- Os dados são da ANA — Agência Nacional de Águas e Saneamento Básico. O
+  acesso autenticado requer cadastro próprio junto à ANA.
+
+## Desenvolvimento
+
+```bash
+pip install -e ".[dev]"
 pytest
-
-# Run tests with coverage
-pytest --cov=src/pyhydroweb --cov-report=html
 ```
 
-## Station Codes
+## Licença
 
-Station codes can be found on the [HidroWeb portal](https://www.snirh.gov.br/hidroweb/serieshistoricas).
-
-Common station examples:
-
-- 34879500 - Rio Paraná near Itaipu
-- 34880000 - Rio Paraná de Campos
-- 40006000 - Rio Araguaia
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## References
-
-- [HidroWeb Portal](https://www.snirh.gov.br/hidroweb/)
-- [National Water Agency (ANA)](https://www.gov.br/ana/)
-- [ANA GitHub](https://github.com/anagovbr)
-
-## Changelog
-
-### Version 1.0.0
-
-- Initial release
-- Added `download_hidroweb_data()` for single station downloads
-- Added `download_from_list()` for batch downloads
-- Added `download_from_shape()` for geographic area downloads
-- Comprehensive error handling and validation
-- Full type hints and documentation
-- Comprehensive test suite
+MIT — veja [LICENSE](LICENSE).

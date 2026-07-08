@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyhydroweb"
-version = "1.0.0"
-description = "Download Brazilian hydrological data from HidroWeb portal"
+version = "2.0.0"
+description = "Acquire, standardize, analyze and export Brazilian hydrological data from ANA (Python translation of hydroDataBR)"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "pyHidroWeb Contributors"}
@@ -36,17 +36,24 @@ classifiers = [
 ]
 
 dependencies = [
-    "pandas>=1.0.0",
+    "pandas>=1.3.0",
+    "numpy>=1.21.0",
     "requests>=2.25.0",
+    "pyarrow>=8.0.0",
 ]
 
 [project.optional-dependencies]
+plot = ["matplotlib>=3.4.0"]
 xarray = ["xarray>=0.16.0"]
+geo = ["geopandas>=0.8.0", "shapely>=1.7.0"]
 geopandas = ["geopandas>=0.8.0", "shapely>=1.7.0"]
+vertices = ["pyreadr>=0.4.0"]
 all = [
+    "matplotlib>=3.4.0",
     "xarray>=0.16.0",
     "geopandas>=0.8.0",
     "shapely>=1.7.0",
+    "pyreadr>=0.4.0",
 ]
 dev = [
     "pytest>=6.0.0",
@@ -65,6 +72,9 @@ Repository = "https://github.com/duartejr/pyhidroweb.git"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pyhydroweb = ["data/*.parquet"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
