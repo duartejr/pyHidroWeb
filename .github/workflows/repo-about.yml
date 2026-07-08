@@ -1,9 +1,14 @@
 name: Update repository About
 
-# Manually triggered. Updates the GitHub repository "About" sidebar
-# (description + topics). Editing the description needs administration
-# permission on the repository token; topics need push access.
+# Updates the GitHub repository "About" sidebar (description + topics) when a
+# version tag is pushed, and can also be started manually. Editing the
+# description needs administration permission on the workflow token; topics
+# need push access. If the token lacks admin, set the description manually in
+# Settings — the topics still apply.
 on:
+  push:
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
