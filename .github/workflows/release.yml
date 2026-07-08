@@ -1,0 +1,55 @@
+name: Release
+
+# Manually triggered release. Creates the git tag (if needed) and a GitHub
+# Release whose notes are the matching section of CHANGELOG.md.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag (e.g. v2.0.0)"
+        required: true
+        default: "v2.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        run: |
+          set -euo pipefail
+          version="${{ github.event.inputs.version }}"
+          number="${version#v}"
+          awk -v v="$number" '
+            $0 ~ "^## \\[" v "\\]" { capture = 1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG.md section found for $number; using a generic note." > release-notes.md
+          fi
+          echo "Release notes:"
+          cat release-notes.md
+
+      - name: Create or update the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ github.event.inputs.version }}"
+          if gh release view "$version" >/dev/null 2>&1; then
+            gh release edit "$version" \
+              --title "pyHidroWeb $version" \
+              --notes-file release-notes.md
+          else
+            gh release create "$version" \
+              --target "$GITHUB_SHA" \
+              --title "pyHidroWeb $version" \
+              --notes-file release-notes.md
+          fi
