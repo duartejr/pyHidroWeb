@@ -1,8 +1,12 @@
 name: Release
 
-# Manually triggered release. Creates the git tag (if needed) and a GitHub
-# Release whose notes are the matching section of CHANGELOG.md.
+# Runs when a version tag (e.g. v2.0.0) is pushed, and can also be started
+# manually. Creates a GitHub Release whose notes are the matching section of
+# CHANGELOG.md.
 on:
+  push:
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
@@ -20,11 +24,16 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      - name: Extract release notes from CHANGELOG.md
+      - name: Resolve version and release notes
         id: notes
         run: |
           set -euo pipefail
-          version="${{ github.event.inputs.version }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ github.event.inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           number="${version#v}"
           awk -v v="$number" '
             $0 ~ "^## \\[" v "\\]" { capture = 1; next }
@@ -32,24 +41,27 @@ jobs:
             capture { print }
           ' CHANGELOG.md > release-notes.md
           if [ ! -s release-notes.md ]; then
-            echo "No CHANGELOG.md section found for $number; using a generic note." > release-notes.md
+            echo "Release $version of pyHidroWeb." > release-notes.md
           fi
-          echo "Release notes:"
-          cat release-notes.md
+          echo "Release notes:"; cat release-notes.md
 
       - name: Create or update the GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          version="${{ github.event.inputs.version }}"
+          version="${{ steps.notes.outputs.version }}"
           if gh release view "$version" >/dev/null 2>&1; then
             gh release edit "$version" \
               --title "pyHidroWeb $version" \
               --notes-file release-notes.md
-          else
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             gh release create "$version" \
               --target "$GITHUB_SHA" \
+              --title "pyHidroWeb $version" \
+              --notes-file release-notes.md
+          else
+            gh release create "$version" \
               --title "pyHidroWeb $version" \
               --notes-file release-notes.md
           fi
