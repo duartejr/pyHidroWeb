@@ -1,10 +1,15 @@
 name: Update repository About
 
 # Updates the GitHub repository "About" sidebar (description + topics) when a
-# version tag is pushed, and can also be started manually. Editing the
-# description needs administration permission on the workflow token; topics
-# need push access. If the token lacks admin, set the description manually in
-# Settings — the topics still apply.
+# version tag is pushed, and can also be started manually. Editing repository
+# settings via `gh repo edit` needs the default GITHUB_TOKEN to have write
+# access, which requires "Read and write permissions" under Settings > Actions
+# > General > Workflow permissions for this repository (there is no separate
+# "administration" scope in the workflow-level permissions block below — repo
+# settings aren't part of that fine-grained list). If that repo setting is
+# left at "Read repository contents permission" (the default), this job will
+# fail with 403 and the description must be set manually in Settings — the
+# topics step can still be retried once write access is enabled.
 on:
   push:
     tags:
@@ -12,8 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  administration: write
-  metadata: read
+  contents: write
 
 jobs:
   about:
